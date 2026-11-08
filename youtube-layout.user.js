@@ -281,11 +281,11 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
 
 
   /* ---------- 탭형 사이드바: 댓글 · 채팅 · 스크립트/챕터 · 재생목록 ---------- */
-  const TAB_LABEL = { comments: '댓글', chat: '채팅', info: '스크립트·챕터', playlist: '재생목록' };
+  const TAB_LABEL = { comments: '댓글', chat: '실시간 채팅', info: '스크립트·챕터', playlist: '재생목록' };
   const TAB_ORDER = ['comments', 'chat', 'info', 'playlist'];
   const PANEL_RE = /transcript|chapters|structured-description|macro-markers/;
   let tabsEl = null, tabsKey = '', activeTab = '', userPicked = false;
-  let panelBusyUntil = 0, offSlot = null, prevExpanded = false;
+  let panelBusyUntil = 0, offSlot = null, prevExpanded = false, prevTab = '', lastReopen = 0;
 
   const infoPanels = (inner) => [...inner.querySelectorAll('#panels > ytd-engagement-panel-section-list-renderer')]
     .filter((p) => PANEL_RE.test(p.getAttribute('target-id') || ''));
@@ -299,6 +299,38 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
     if (expandedPanel(inner) || Date.now() < panelBusyUntil) return;
     const b = transcriptButton(f);
     if (b) { panelBusyUntil = Date.now() + 2000; b.click(); }
+  }
+  // 화면 밖에 있던 채팅 iframe 은 목록이 비어 보일 수 있어, 탭으로 돌아오면 크기 갱신 + 맨 아래로 스크롤
+  function refreshChat() {
+    const run = () => {
+      const frame = $('ytd-live-chat-frame#chat');
+      if (!frame) return;
+      // 채팅이 접혀 있으면 펼침 (아래 "실시간 채팅 다시보기" 카드를 눌러야 나오던 문제)
+      if (frame.hasAttribute('collapsed')) {
+        const btn = $('#show-hide-button button, #show-hide-button', frame);
+        if (btn) btn.click();
+      }
+      let w = null, d = null;
+      try { const ifr = $('iframe', frame); w = ifr && ifr.contentWindow; d = ifr && ifr.contentDocument; } catch (_) {}
+      const items = d && d.querySelector('yt-live-chat-item-list-renderer #items');
+      const empty = !items || !items.children.length;
+      if (empty && Date.now() - lastReopen > 1500) {
+        // 목록이 비어 있으면 카드의 "채팅 열기" 버튼을 대신 눌러 줌
+        const f = $('ytd-watch-flexy');
+        const card = f && [...f.querySelectorAll('button, yt-button-shape button')]
+          .find((x) => /채팅 열기|채팅 다시보기 열기|open chat|show chat/i.test((x.getAttribute('aria-label') || '') + ' ' + x.textContent));
+        if (card) { lastReopen = Date.now(); card.click(); }
+      }
+      if (!w || !d) return;
+      try {
+        w.dispatchEvent(new Event('resize'));
+        const sc = d.querySelector('#item-scroller');
+        if (sc) sc.scrollTop = sc.scrollHeight;
+        const more = d.querySelector('#show-more');
+        if (more && more.offsetParent !== null) more.click();
+      } catch (_) {}
+    };
+    [60, 250, 700].forEach((t) => setTimeout(run, t));
   }
   function pickTab(key) {
     if (key === activeTab) return;
@@ -370,6 +402,8 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
     }
 
     clearAllStyles();
+    if (activeTab === 'chat' && prevTab !== 'chat') refreshChat();
+    prevTab = activeTab;
 
     // 탭 바
     const key = keys.join(',');
