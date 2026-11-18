@@ -3,7 +3,7 @@
 // @namespace    youbitter
 // @updateURL    https://raw.githubusercontent.com/boldvoid/youtube-layout/main/youtube-layout.user.js
 // @downloadURL  https://raw.githubusercontent.com/boldvoid/youtube-layout/main/youtube-layout.user.js
-// @version      0.19.4
+// @version      0.20.0
 // @description  댓글을 오른쪽 위로, 추천 영상은 영상 아래 N열 카드로, 라이브 채팅은 영상 위 버블로 보여줍니다.
 // @match        https://www.youtube.com/*
 // @run-at       document-start
@@ -15,9 +15,9 @@
 // ==/UserScript==
 
 // 유저스크립트 단독 파일입니다. 이 파일을 직접 수정하세요.
-// 버전: 0.19.4 beta
+// 버전: 0.20.0 beta
 
-const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 값으로 통일 (JS의 GAP 과 같은 값) */\nhtml { --ytpc-gap: 12px; --ytpc-radius: 12px; }\n\n/* 오른쪽 칸 맨 위 댓글 상자 */\n#ytpc-box {\n  position: relative;\n  height: var(--ytpc-h, 360px);\n  border: 1px solid rgba(0, 0, 0, .1);\n  border-radius: var(--ytpc-radius);\n  overflow: hidden;\n  box-sizing: border-box;\n  background: transparent;\n  color-scheme: light;\n}\n/* 다크모드: YouTube 다크 테마(html[dark])일 때 */\nhtml[dark] #ytpc-box {\n  border-color: rgba(255, 255, 255, .16);\n  color-scheme: dark;\n}\n#ytpc-box .ytpc-scroll {\n  position: absolute;\n  inset: 0;\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: var(--ytpc-gap) var(--ytpc-gap) 4px var(--ytpc-gap);\n  box-sizing: border-box;\n}\n/* 좁은 칸에 맞게 댓글 여백 정리 */\n#ytpc-box ytd-comments#comments { margin: 0 !important; padding: 0 !important; }\n#ytpc-box ytd-comments-header-renderer { margin-top: 0 !important; margin-bottom: 16px !important; }\n#ytpc-box ytd-comments-header-renderer #title { flex-wrap: wrap; }\n\n/* ---- 추천 영상: 영상 아래 전체 너비 N열 카드 ---- */\n#ytpc-wide {\n  box-sizing: border-box;\n  width: 100%;\n  padding: var(--ytpc-gap) calc(var(--ytpc-gap) * 2) calc(var(--ytpc-gap) * 2);\n}\n#ytpc-wide ytd-watch-next-secondary-results-renderer { display: block; width: 100% !important; max-width: none !important; margin: 0 !important; }\n#ytpc-wide ytd-item-section-renderer > #contents {\n  display: grid !important;\n  grid-template-columns: repeat(var(--ytpc-cols, 4), minmax(0, 1fr));\n  grid-auto-flow: row dense;   /* 쇼츠 묶음 등 한 줄짜리 때문에 생긴 빈칸을 뒤 영상으로 채움 */\n  column-gap: var(--ytpc-gap);\n  row-gap: calc(var(--ytpc-gap) * 2);\n}\n/* 영상 카드·광고가 아닌 것(더보기 로딩, 쇼츠 묶음 등)은 한 줄 전체 */\n#ytpc-wide ytd-item-section-renderer > #contents > :not(yt-lockup-view-model):not(ytd-compact-video-renderer):not(ytd-ad-slot-renderer) {\n  grid-column: 1 / -1;\n}\n#ytpc-wide ytd-item-section-renderer > #contents > * { margin: 0 !important; min-width: 0; }\n\n/* 새 YouTube 카드: 썸네일 위, 제목 아래 */\n#ytpc-wide yt-lockup-view-model .ytLockupViewModelHost { flex-direction: column !important; padding: 0 !important; }\n#ytpc-wide yt-lockup-view-model .ytLockupViewModelContentImage { width: 100% !important; margin: 0 0 8px 0 !important; padding: 0 !important; }\n#ytpc-wide yt-lockup-view-model .ytLockupViewModelMetadata { width: 100%; min-width: 0; }\n\n/* 예전 YouTube 카드 */\n#ytpc-wide ytd-compact-video-renderer #dismissible { flex-direction: column !important; }\n#ytpc-wide ytd-compact-video-renderer ytd-thumbnail { width: 100% !important; margin: 0 0 8px 0 !important; }\n#ytpc-wide ytd-compact-video-renderer .details { padding: 0 !important; }\n\n/* ---- 댓글 로딩 효과 (YouTube 스켈레톤 + 글로우) ---- */\n#ytpc-box .ytpc-scroll { transition: opacity .25s ease; }\n#ytpc-box.ytpc-loading .ytpc-scroll { opacity: 0; pointer-events: none; }\n#ytpc-box .ytpc-skeleton {\n  position: absolute;\n  inset: 0;\n  padding: 16px 14px;\n  overflow: hidden;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity .25s ease;\n  --sk-base: rgba(0, 0, 0, .06);\n  --sk-glow: rgba(0, 0, 0, .12);\n}\nhtml[dark] #ytpc-box .ytpc-skeleton {\n  --sk-base: rgba(255, 255, 255, .08);\n  --sk-glow: rgba(255, 255, 255, .17);\n}\n#ytpc-box.ytpc-loading .ytpc-skeleton { opacity: 1; }\n\n.ytpc-sk {\n  border-radius: 4px;\n  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-base) 35%, var(--sk-glow) 50%, var(--sk-base) 65%, var(--sk-base) 100%);\n  background-size: 300% 100%;\n  animation: ytpc-glow 1.4s ease-in-out infinite;\n}\n@keyframes ytpc-glow {\n  0%   { background-position: 100% 0; }\n  100% { background-position: 0 0; }\n}\n.ytpc-sk-head { display: flex; gap: 24px; align-items: center; margin-bottom: 24px; }\n.ytpc-sk-title { width: 96px; height: 20px; }\n.ytpc-sk-sort { width: 72px; height: 20px; }\n.ytpc-sk-row { display: flex; gap: 12px; margin-bottom: 22px; }\n.ytpc-sk-avatar { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; }\n.ytpc-sk-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }\n.ytpc-sk-name { width: 35%; height: 12px; }\n.ytpc-sk-text { width: 92%; height: 14px; }\n.ytpc-sk-short { width: 60%; }\n@media (prefers-reduced-motion: reduce) { .ytpc-sk { animation: none; } }\n\n/* ---- 오른쪽 칸으로 옮긴 추천 탭 ---- */\n#secondary-inner > .ytpc-chips {\n  display: block;\n  width: 100%;\n  min-width: 0;\n  padding: 0 !important;\n  overflow: hidden;\n}\n#secondary-inner > .ytpc-chips > * { margin: 0 !important; max-width: 100% !important; }\n\n/* ---- 라이브 채팅 버블 ---- */\n/* 오른쪽 채팅창: 메시지는 계속 받아야 하므로 끄지 않고 화면 밖으로 치움 */\nhtml.ytpc-hidechat:not(.ytpc-fs) ytd-watch-flexy:not([fullscreen]):not([theater]) ytd-live-chat-frame#chat {\n  position: fixed !important;\n  left: -10000px !important;\n  top: 0 !important;\n  width: 400px !important;\n  height: 700px !important;\n  min-height: 0 !important;\n  max-height: none !important;\n  opacity: 0 !important;\n  pointer-events: none !important;\n}\n\n#ytpc-bubbles {\n  position: absolute;\n  left: 16px;\n  bottom: 64px;                 /* 재생 컨트롤 위 */\n  z-index: 40;\n  width: min(420px, 42%);\n  display: flex;\n  flex-direction: column;\n  align-items: flex-start;\n  gap: 6px;\n  pointer-events: none;\n  transition: bottom .2s ease;\n}\n.ytp-autohide #ytpc-bubbles { bottom: 20px; }   /* 컨트롤이 숨으면 아래로 */\n\n.ytpc-bubble {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n  max-width: 100%;\n  padding: 6px 12px 6px 6px;\n  border-radius: 18px;\n  background: rgba(15, 15, 15, .62);\n  backdrop-filter: blur(8px);\n  -webkit-backdrop-filter: blur(8px);\n  color: #fff;\n  font: 400 14px/1.4 Roboto, \"Malgun Gothic\", Arial, sans-serif;\n  text-shadow: 0 1px 2px rgba(0, 0, 0, .5);\n  box-shadow: 0 2px 10px rgba(0, 0, 0, .25);\n  animation: ytpc-bubble-in .25s ease-out both;\n  word-break: break-word;\n}\n.ytpc-bubble.ytpc-out { animation: ytpc-bubble-out .4s ease-in both; }\n@keyframes ytpc-bubble-in  { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }\n@keyframes ytpc-bubble-out { to { opacity: 0; transform: translateY(-6px); } }\n\n.ytpc-bubble-avatar { flex: 0 0 24px; width: 24px; height: 24px; border-radius: 50%; }\n.ytpc-bubble-body { min-width: 0; padding-top: 2px; }\n.ytpc-bubble-name { font-weight: 500; color: rgba(255, 255, 255, .72); margin-right: 6px; }\n.ytpc-bubble-amount { font-weight: 700; margin-right: 6px; }\n.ytpc-emoji { width: 20px; height: 20px; vertical-align: -4px; margin: 0 1px; }\n\n.ytpc-author-owner .ytpc-bubble-name { color: #ffd600; }\n.ytpc-author-moderator .ytpc-bubble-name { color: #5e84f1; }\n.ytpc-author-member .ytpc-bubble-name { color: #2ba640; }\n.ytpc-bubble.ytpc-paid { background: var(--ytpc-paid, #1565c0); }\n.ytpc-bubble.ytpc-paid .ytpc-bubble-name { color: rgba(255, 255, 255, .85); }\n.ytpc-bubble.ytpc-member { background: rgba(15, 157, 88, .85); }\n\n@media (prefers-reduced-motion: reduce) {\n  .ytpc-bubble, .ytpc-bubble.ytpc-out { animation: none; }\n}\n\n/* ---- 라이브 채팅창: 오른쪽 칸 맨 위, 다른 칸과 같은 모서리 ---- */\n#secondary-inner > ytd-live-chat-frame#chat {\n  border-radius: var(--ytpc-radius) !important;\n  overflow: hidden;\n  box-sizing: border-box;\n}\n\n/* 다른 영상으로 이동하는 동안 이전 라이브 채팅이 잠깐 보이지 않게 */\nhtml.ytpc-navigating ytd-live-chat-frame#chat,\nhtml.ytpc-navigating #chat-container { visibility: hidden !important; }\n\n/* ---- 탭형 사이드바 ---- */\n#ytpc-tabs {\n  width: 100%;\n  max-width: 100%;\n  min-width: 0;\n  flex: 0 0 auto;\n  flex-wrap: nowrap;\n  overscroll-behavior-x: contain;\n  user-select: none;\n  touch-action: pan-x;\n  display: flex;\n  gap: 6px;\n  overflow: hidden;\n  box-sizing: border-box;\n}\n#ytpc-tabs[hidden] { display: none !important; }\n#ytpc-tabs::-webkit-scrollbar { display: none; }\n.ytpc-tab {\n  flex: 0 0 auto;\n  height: 32px;\n  padding: 0 9px;\n  border: 0;\n  border-radius: 8px;\n  font: 500 13px/32px Roboto, Arial, sans-serif;\n  cursor: pointer;\n  background: rgba(0, 0, 0, .05);\n  color: #0f0f0f;\n  white-space: nowrap;\n}\n.ytpc-tab:hover { background: rgba(0, 0, 0, .1); }\n.ytpc-tab[aria-selected=\"true\"] { background: #0f0f0f; color: #fff; }\nhtml[dark] .ytpc-tab { background: rgba(255, 255, 255, .1); color: #f1f1f1; }\nhtml[dark] .ytpc-tab:hover { background: rgba(255, 255, 255, .2); }\nhtml[dark] .ytpc-tab[aria-selected=\"true\"] { background: #f1f1f1; color: #0f0f0f; }\n\n/* 숨겨진 채팅 화면: 메시지를 계속 받아야 해서(버블) display:none 대신 화면 밖으로 */\n#secondary-inner > .ytpc-offslot {\n  position: fixed !important;\n  left: -10000px !important;\n  top: 0 !important;\n  width: 400px !important;\n  height: 700px !important;\n  opacity: 0 !important;\n  pointer-events: none !important;\n}\n\n/* 탭 화면들의 모서리를 통일 */\n#secondary-inner > ytd-playlist-panel-renderer#playlist,\n#secondary-inner > #panels > ytd-engagement-panel-section-list-renderer {\n  border-radius: var(--ytpc-radius) !important;\n  overflow: hidden;\n}\n\n/* 탭에 합친 \"실시간 채팅 다시보기\" 카드 */\n#teaser-carousel.ytpc-merged { display: none !important; }\n\n/* 정보 패널: 제목 줄과 안쪽 칩 줄 숨김 (칩은 위 탭으로 올림) */\nytd-engagement-panel-section-list-renderer[ytpc-flat] > #header,\nytd-engagement-panel-section-list-renderer[ytpc-flat] chip-bar-view-model { display: none !important; }\nytd-engagement-panel-section-list-renderer[ytpc-flat] chip-view-model:has(button[aria-label=\"타임라인\"]) { display: none !important; }\n\n/* 댓글이 꺼진 영상 안내 */\n#ytpc-box .ytpc-nocomments-msg {\n  display: none;\n  position: absolute;\n  inset: 0;\n  align-items: center;\n  justify-content: center;\n  padding: 24px;\n  text-align: center;\n  font: 400 14px/1.5 Roboto, \"Malgun Gothic\", Arial, sans-serif;\n  color: #606060;\n}\nhtml[dark] #ytpc-box .ytpc-nocomments-msg { color: #aaa; }\n#ytpc-box.ytpc-nocomments .ytpc-nocomments-msg { display: flex; }\n#ytpc-box.ytpc-nocomments .ytpc-scroll,\n#ytpc-box.ytpc-nocomments .ytpc-skeleton { display: none; }\n\n/* 오른쪽 칸 높이가 바뀔 때 Chrome 스크롤 앵커링이 페이지를 밀지 않게 */\n#secondary, #secondary-inner, #primary-inner, #below { overflow-anchor: none; }\n\n#ytpc-split{margin:0!important;box-sizing:border-box;display:none;flex:0 0 18px;height:18px;order:2;cursor:row-resize;touch-action:none;position:relative;z-index:5;user-select:none}\n#ytpc-split.on{display:block}\n#ytpc-split::before{content:\"\";position:absolute;left:0;right:0;top:-8px;bottom:-8px}#ytpc-split::after{content:\"\";position:absolute;left:50%;top:50%;width:48px;height:6px;margin:-3px 0 0 -24px;border-radius:3px;background:var(--yt-spec-text-secondary,#888);opacity:.45;transition:opacity .15s,background .15s}\n#ytpc-split:hover::after,#ytpc-split.drag::after{opacity:1;background:var(--yt-spec-call-to-action,#3ea6ff)}ytd-engagement-panel-section-list-renderer[ytpc-flat]{margin:0!important;box-sizing:border-box;background:var(--yt-spec-base-background,#0f0f0f)!important;border:1px solid var(--yt-spec-10-percent-layer,rgba(255,255,255,.12));border-radius:var(--ytpc-radius,12px);overflow:hidden}\n#ytpc-box,#secondary-inner>#panels,#secondary-inner>#panels>ytd-engagement-panel-section-list-renderer{min-width:0;max-width:100%}\n#secondary-inner>#panels{overflow:hidden}\n#ytpc-tabs.ytpc-tight{gap:4px}#ytpc-tabs.ytpc-tight .ytpc-tab{padding:0 6px;font-size:12px}\n/* 사용자가 실시간 채팅을 숨겼을 때 채팅 탭 안내 */\n#ytpc-chatoff{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;box-sizing:border-box;padding:24px;border:1px solid rgba(0,0,0,.1);border-radius:var(--ytpc-radius);font:400 14px/1.5 Roboto,\"Malgun Gothic\",Arial,sans-serif;color:#606060;text-align:center}\nhtml[dark] #ytpc-chatoff{border-color:rgba(255,255,255,.16);color:#aaa}\n#ytpc-chatoff button{height:36px;padding:0 16px;border:0;border-radius:18px;cursor:pointer;font:500 14px/36px Roboto,\"Malgun Gothic\",Arial,sans-serif;background:#0f0f0f;color:#fff}\nhtml[dark] #ytpc-chatoff button{background:#f1f1f1;color:#0f0f0f}";
+const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 값으로 통일 (JS의 GAP 과 같은 값) */\nhtml { --ytpc-gap: 12px; --ytpc-radius: 12px; }\n\n/* 오른쪽 칸 맨 위 댓글 상자 */\n#ytpc-box {\n  position: relative;\n  height: var(--ytpc-h, 360px);\n  border: 1px solid rgba(0, 0, 0, .1);\n  border-radius: var(--ytpc-radius);\n  overflow: hidden;\n  box-sizing: border-box;\n  background: transparent;\n  color-scheme: light;\n}\n/* 다크모드: YouTube 다크 테마(html[dark])일 때 */\nhtml[dark] #ytpc-box {\n  border-color: rgba(255, 255, 255, .16);\n  color-scheme: dark;\n}\n#ytpc-box .ytpc-scroll {\n  position: absolute;\n  inset: 0;\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: var(--ytpc-gap) var(--ytpc-gap) 4px var(--ytpc-gap);\n  box-sizing: border-box;\n}\n/* 좁은 칸에 맞게 댓글 여백 정리 */\n#ytpc-box ytd-comments#comments { margin: 0 !important; padding: 0 !important; }\n#ytpc-box ytd-comments-header-renderer { margin-top: 0 !important; margin-bottom: 16px !important; }\n#ytpc-box ytd-comments-header-renderer #title { flex-wrap: wrap; }\n\n/* ---- 추천 영상: 영상 아래 전체 너비 N열 카드 ---- */\n#ytpc-wide {\n  box-sizing: border-box;\n  width: 100%;\n  padding: var(--ytpc-gap) calc(var(--ytpc-gap) * 2) calc(var(--ytpc-gap) * 2);\n}\n#ytpc-wide ytd-watch-next-secondary-results-renderer { display: block; width: 100% !important; max-width: none !important; margin: 0 !important; }\n#ytpc-wide ytd-item-section-renderer > #contents {\n  display: grid !important;\n  grid-template-columns: repeat(var(--ytpc-cols, 4), minmax(0, 1fr));\n  grid-auto-flow: row dense;   /* 쇼츠 묶음 등 한 줄짜리 때문에 생긴 빈칸을 뒤 영상으로 채움 */\n  column-gap: var(--ytpc-gap);\n  row-gap: calc(var(--ytpc-gap) * 2);\n}\n/* 영상 카드·광고가 아닌 것(더보기 로딩, 쇼츠 묶음 등)은 한 줄 전체 */\n#ytpc-wide ytd-item-section-renderer > #contents > :not(yt-lockup-view-model):not(ytd-compact-video-renderer):not(ytd-ad-slot-renderer) {\n  grid-column: 1 / -1;\n}\n#ytpc-wide ytd-item-section-renderer > #contents > * { margin: 0 !important; min-width: 0; }\n\n/* 새 YouTube 카드: 썸네일 위, 제목 아래 */\n#ytpc-wide yt-lockup-view-model .ytLockupViewModelHost { flex-direction: column !important; padding: 0 !important; }\n#ytpc-wide yt-lockup-view-model .ytLockupViewModelContentImage { width: 100% !important; margin: 0 0 8px 0 !important; padding: 0 !important; }\n#ytpc-wide yt-lockup-view-model .ytLockupViewModelMetadata { width: 100%; min-width: 0; }\n\n/* 예전 YouTube 카드 */\n#ytpc-wide ytd-compact-video-renderer #dismissible { flex-direction: column !important; }\n#ytpc-wide ytd-compact-video-renderer ytd-thumbnail { width: 100% !important; margin: 0 0 8px 0 !important; }\n#ytpc-wide ytd-compact-video-renderer .details { padding: 0 !important; }\n\n/* ---- 댓글 로딩 효과 (YouTube 스켈레톤 + 글로우) ---- */\n#ytpc-box .ytpc-scroll { transition: opacity .25s ease; }\n#ytpc-box.ytpc-loading .ytpc-scroll { opacity: 0; pointer-events: none; }\n#ytpc-box .ytpc-skeleton {\n  position: absolute;\n  inset: 0;\n  padding: 16px 14px;\n  overflow: hidden;\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity .25s ease;\n  --sk-base: rgba(0, 0, 0, .06);\n  --sk-glow: rgba(0, 0, 0, .12);\n}\nhtml[dark] #ytpc-box .ytpc-skeleton {\n  --sk-base: rgba(255, 255, 255, .08);\n  --sk-glow: rgba(255, 255, 255, .17);\n}\n#ytpc-box.ytpc-loading .ytpc-skeleton { opacity: 1; }\n\n.ytpc-sk {\n  border-radius: 4px;\n  background: linear-gradient(90deg, var(--sk-base) 0%, var(--sk-base) 35%, var(--sk-glow) 50%, var(--sk-base) 65%, var(--sk-base) 100%);\n  background-size: 300% 100%;\n  animation: ytpc-glow 1.4s ease-in-out infinite;\n}\n@keyframes ytpc-glow {\n  0%   { background-position: 100% 0; }\n  100% { background-position: 0 0; }\n}\n.ytpc-sk-head { display: flex; gap: 24px; align-items: center; margin-bottom: 24px; }\n.ytpc-sk-title { width: 96px; height: 20px; }\n.ytpc-sk-sort { width: 72px; height: 20px; }\n.ytpc-sk-row { display: flex; gap: 12px; margin-bottom: 22px; }\n.ytpc-sk-avatar { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; }\n.ytpc-sk-lines { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }\n.ytpc-sk-name { width: 35%; height: 12px; }\n.ytpc-sk-text { width: 92%; height: 14px; }\n.ytpc-sk-short { width: 60%; }\n@media (prefers-reduced-motion: reduce) { .ytpc-sk { animation: none; } }\n\n/* ---- 오른쪽 칸으로 옮긴 추천 탭 ---- */\n#secondary-inner > .ytpc-chips {\n  display: block;\n  width: 100%;\n  min-width: 0;\n  padding: 0 !important;\n  overflow: hidden;\n}\n#secondary-inner > .ytpc-chips > * { margin: 0 !important; max-width: 100% !important; }\n\n/* ---- 라이브 채팅 버블 ---- */\n/* 오른쪽 채팅창: 메시지는 계속 받아야 하므로 끄지 않고 화면 밖으로 치움 */\nhtml.ytpc-hidechat:not(.ytpc-fs) ytd-watch-flexy:not([fullscreen]):not([theater]) ytd-live-chat-frame#chat {\n  position: fixed !important;\n  left: -10000px !important;\n  top: 0 !important;\n  width: 400px !important;\n  height: 700px !important;\n  min-height: 0 !important;\n  max-height: none !important;\n  opacity: 0 !important;\n  pointer-events: none !important;\n}\n\n#ytpc-bubbles {\n  position: absolute;\n  left: 16px;\n  bottom: 64px;                 /* 재생 컨트롤 위 */\n  z-index: 40;\n  width: min(420px, 42%);\n  display: flex;\n  flex-direction: column;\n  align-items: flex-start;\n  gap: 6px;\n  pointer-events: none;\n  transition: bottom .2s ease;\n}\n.ytp-autohide #ytpc-bubbles { bottom: 20px; }   /* 컨트롤이 숨으면 아래로 */\n\n.ytpc-bubble {\n  display: flex;\n  align-items: flex-start;\n  gap: 8px;\n  max-width: 100%;\n  padding: 6px 12px 6px 6px;\n  border-radius: 18px;\n  background: rgba(15, 15, 15, .62);\n  backdrop-filter: blur(8px);\n  -webkit-backdrop-filter: blur(8px);\n  color: #fff;\n  font: 400 14px/1.4 Roboto, \"Malgun Gothic\", Arial, sans-serif;\n  text-shadow: 0 1px 2px rgba(0, 0, 0, .5);\n  box-shadow: 0 2px 10px rgba(0, 0, 0, .25);\n  animation: ytpc-bubble-in .25s ease-out both;\n  word-break: break-word;\n}\n.ytpc-bubble.ytpc-out { animation: ytpc-bubble-out .4s ease-in both; }\n@keyframes ytpc-bubble-in  { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }\n@keyframes ytpc-bubble-out { to { opacity: 0; transform: translateY(-6px); } }\n\n.ytpc-bubble-avatar { flex: 0 0 24px; width: 24px; height: 24px; border-radius: 50%; }\n.ytpc-bubble-body { min-width: 0; padding-top: 2px; }\n.ytpc-bubble-name { font-weight: 500; color: rgba(255, 255, 255, .72); margin-right: 6px; }\n.ytpc-bubble-amount { font-weight: 700; margin-right: 6px; }\n.ytpc-emoji { width: 20px; height: 20px; vertical-align: -4px; margin: 0 1px; }\n\n.ytpc-author-owner .ytpc-bubble-name { color: #ffd600; }\n.ytpc-author-moderator .ytpc-bubble-name { color: #5e84f1; }\n.ytpc-author-member .ytpc-bubble-name { color: #2ba640; }\n.ytpc-bubble.ytpc-paid { background: var(--ytpc-paid, #1565c0); }\n.ytpc-bubble.ytpc-paid .ytpc-bubble-name { color: rgba(255, 255, 255, .85); }\n.ytpc-bubble.ytpc-member { background: rgba(15, 157, 88, .85); }\n\n@media (prefers-reduced-motion: reduce) {\n  .ytpc-bubble, .ytpc-bubble.ytpc-out { animation: none; }\n}\n\n/* ---- 라이브 채팅창: 오른쪽 칸 맨 위, 다른 칸과 같은 모서리 ---- */\n#secondary-inner > ytd-live-chat-frame#chat {\n  border-radius: var(--ytpc-radius) !important;\n  overflow: hidden;\n  box-sizing: border-box;\n}\n\n/* 다른 영상으로 이동하는 동안 이전 라이브 채팅이 잠깐 보이지 않게 */\nhtml.ytpc-navigating ytd-live-chat-frame#chat,\nhtml.ytpc-navigating #chat-container { visibility: hidden !important; }\n\n/* ---- 탭형 사이드바 ---- */\n#ytpc-tabs {\n  width: 100%;\n  max-width: 100%;\n  min-width: 0;\n  flex: 0 0 auto;\n  flex-wrap: nowrap;\n  overscroll-behavior-x: contain;\n  user-select: none;\n  touch-action: pan-x;\n  display: flex;\n  gap: 6px;\n  overflow: hidden;\n  box-sizing: border-box;\n}\n#ytpc-tabs[hidden] { display: none !important; }\n#ytpc-tabs::-webkit-scrollbar { display: none; }\n.ytpc-tab {\n  flex: 0 0 auto;\n  height: 32px;\n  padding: 0 9px;\n  border: 0;\n  border-radius: 8px;\n  font: 500 13px/32px Roboto, Arial, sans-serif;\n  cursor: pointer;\n  background: rgba(0, 0, 0, .05);\n  color: #0f0f0f;\n  white-space: nowrap;\n}\n.ytpc-tab:hover { background: rgba(0, 0, 0, .1); }\n.ytpc-tab[aria-selected=\"true\"] { background: #0f0f0f; color: #fff; }\nhtml[dark] .ytpc-tab { background: rgba(255, 255, 255, .1); color: #f1f1f1; }\nhtml[dark] .ytpc-tab:hover { background: rgba(255, 255, 255, .2); }\nhtml[dark] .ytpc-tab[aria-selected=\"true\"] { background: #f1f1f1; color: #0f0f0f; }\n\n/* 숨겨진 채팅 화면: 메시지를 계속 받아야 해서(버블) display:none 대신 화면 밖으로 */\n#secondary-inner > .ytpc-offslot {\n  position: fixed !important;\n  left: -10000px !important;\n  top: 0 !important;\n  width: 400px !important;\n  height: 700px !important;\n  opacity: 0 !important;\n  pointer-events: none !important;\n}\n\n/* 탭 화면들의 모서리를 통일 */\n#secondary-inner > ytd-playlist-panel-renderer#playlist,\n#secondary-inner > #panels > ytd-engagement-panel-section-list-renderer {\n  border-radius: var(--ytpc-radius) !important;\n  overflow: hidden;\n}\n\n/* 탭에 합친 \"실시간 채팅 다시보기\" 카드 */\n#teaser-carousel.ytpc-merged { display: none !important; }\n\n/* 정보 패널: 제목 줄과 안쪽 칩 줄 숨김 (칩은 위 탭으로 올림) */\nytd-engagement-panel-section-list-renderer[ytpc-flat] > #header,\nytd-engagement-panel-section-list-renderer[ytpc-flat] chip-bar-view-model { display: none !important; }\nytd-engagement-panel-section-list-renderer[ytpc-flat] chip-view-model:has(button[aria-label=\"타임라인\"]) { display: none !important; }\n\n/* 댓글이 꺼진 영상 안내 */\n#ytpc-box .ytpc-nocomments-msg {\n  display: none;\n  position: absolute;\n  inset: 0;\n  align-items: center;\n  justify-content: center;\n  padding: 24px;\n  text-align: center;\n  font: 400 14px/1.5 Roboto, \"Malgun Gothic\", Arial, sans-serif;\n  color: #606060;\n}\nhtml[dark] #ytpc-box .ytpc-nocomments-msg { color: #aaa; }\n#ytpc-box.ytpc-nocomments .ytpc-nocomments-msg { display: flex; }\n#ytpc-box.ytpc-nocomments .ytpc-scroll,\n#ytpc-box.ytpc-nocomments .ytpc-skeleton { display: none; }\n\n/* 오른쪽 칸 높이가 바뀔 때 Chrome 스크롤 앵커링이 페이지를 밀지 않게 */\n#secondary, #secondary-inner, #primary-inner, #below { overflow-anchor: none; }\n\n#ytpc-split{margin:0!important;box-sizing:border-box;display:none;flex:0 0 18px;height:18px;order:2;cursor:row-resize;touch-action:none;position:relative;z-index:5;user-select:none}\n#ytpc-split.on{display:block}\n#ytpc-split::before{content:\"\";position:absolute;left:0;right:0;top:-8px;bottom:-8px}#ytpc-split::after{content:\"\";position:absolute;left:50%;top:50%;width:48px;height:6px;margin:-3px 0 0 -24px;border-radius:3px;background:var(--yt-spec-text-secondary,#888);opacity:.45;transition:opacity .15s,background .15s}\n#ytpc-split:hover::after,#ytpc-split.drag::after{opacity:1;background:var(--yt-spec-call-to-action,#3ea6ff)}ytd-engagement-panel-section-list-renderer[ytpc-flat]{margin:0!important;box-sizing:border-box;background:var(--yt-spec-base-background,#0f0f0f)!important;border:1px solid var(--yt-spec-10-percent-layer,rgba(255,255,255,.12));border-radius:var(--ytpc-radius,12px);overflow:hidden}\n#ytpc-box,#secondary-inner>#panels,#secondary-inner>#panels>ytd-engagement-panel-section-list-renderer{min-width:0;max-width:100%}\n#secondary-inner>#panels{overflow:hidden}\n#ytpc-tabs.ytpc-tight{gap:4px}#ytpc-tabs.ytpc-tight .ytpc-tab{padding:0 6px;font-size:12px}\n/* 사용자가 실시간 채팅을 숨겼을 때 채팅 탭 안내 */\n#ytpc-chatoff{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;box-sizing:border-box;padding:24px;border:1px solid rgba(0,0,0,.1);border-radius:var(--ytpc-radius);font:400 14px/1.5 Roboto,\"Malgun Gothic\",Arial,sans-serif;color:#606060;text-align:center}\nhtml[dark] #ytpc-chatoff{border-color:rgba(255,255,255,.16);color:#aaa}\n#ytpc-chatoff button{height:36px;padding:0 16px;border:0;border-radius:18px;cursor:pointer;font:500 14px/36px Roboto,\"Malgun Gothic\",Arial,sans-serif;background:#0f0f0f;color:#fff}\nhtml[dark] #ytpc-chatoff button{background:#f1f1f1;color:#0f0f0f}\n/* 전체화면: 사용자가 실시간 채팅을 열기 전까지 오른쪽 칸을 치워 영상이 전체 폭을 쓰게 함 (채팅은 버블용으로 화면 밖에서 계속 동작) */\nhtml.ytpc-fs-nochat ytd-watch-flexy[fullscreen] #panels-full-bleed-container{position:fixed!important;left:-10000px!important;top:0!important;width:400px!important;height:700px!important;transform:none!important;animation:none!important;opacity:0!important;pointer-events:none!important}";
 
 (() => {
   'use strict';
@@ -380,9 +380,8 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
       se.scrollTo({ left: scrollLock.x, top: scrollLock.y, behavior: 'instant' });
     }
   }, { passive: true, capture: true });
-  let userInputAt = 0;
   ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach((ev) =>
-    window.addEventListener(ev, () => { scrollLock = null; userInputAt = Date.now(); }, { passive: true, capture: true }));
+    window.addEventListener(ev, () => { scrollLock = null; }, { passive: true, capture: true }));
   // 잠금 시작/연장 (이미 잠겨 있으면 처음 저장한 위치를 유지)
   function holdScroll(ms) {
     const now = Date.now();
@@ -400,26 +399,29 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
   }
   // 사용자가 직접 실시간 채팅을 숨겼는지 추적 (채팅 숨기기 버튼 / 전체화면의 "실시간 채팅" 버튼 등)
   // 사용자가 숨긴 채팅은 스크립트가 다시 펼치지 않는다 (서로 싸우며 UI 가 깨지던 문제)
-  let userCollapsed = false, prevCollapsed = null, modeChangedAt = 0;
+  let userCollapsed = false, prevCollapsed = null;
   function trackChatCollapse() {
     const frame = $('ytd-live-chat-frame#chat');
     if (!frame) { prevCollapsed = null; return; }
     const c = frame.hasAttribute('collapsed');
     // 모드 전환(전체화면·영화관) 직후 YouTube 가 스스로 접는 것은 사용자 조작이 아님
-    if (prevCollapsed === false && c && Date.now() - ourClickAt > 2500 && Date.now() - modeChangedAt > 2500) userCollapsed = true;
+    // 전체화면에서 끄고 켜는 것은 전체화면만의 선택이라 일반 화면 채팅 탭에는 반영하지 않음
+    const fs = !!document.fullscreenElement || !!($('ytd-watch-flexy') || { hasAttribute: () => false }).hasAttribute('fullscreen');
+    if (prevCollapsed === false && c && !fs && Date.now() - ourClickAt > 2500 && Date.now() - modeChangedAt > 2500) userCollapsed = true;
     if (!c) userCollapsed = false;
     prevCollapsed = c;
   }
-  // 접힌 채팅을 펼치는 버튼 (다시보기 카드 → 채팅 안 "채팅 표시" → 플레이어의 "실시간 채팅")
+  // 접힌 채팅을 펼치는 버튼 (다시보기 카드 → 플레이어의 "실시간 채팅" → 채팅 안 "채팅 표시")
   function chatShowButton(frame) {
     const flexy = $('ytd-watch-flexy') || document;
     const tz = $('#teaser-carousel', flexy);
     if (tz && /채팅 다시보기|chat replay/i.test(tz.textContent.slice(0, 80))) { const c = $('button', tz); if (c) return c; }
     const lab = (b) => ((b.getAttribute('aria-label') || '') + ' ' + b.textContent).trim();
-    return $('#show-hide-button button', frame) ||
-      [...frame.querySelectorAll('button')].find((b) => /채팅 표시|show chat/i.test(lab(b))) ||
-      [...document.querySelectorAll('yt-player-quick-action-buttons button')].find((b) =>
-        /실시간 채팅|live chat/i.test(b.getAttribute('aria-label') || '') && b.getAttribute('aria-pressed') !== 'true') || null;
+    // 플레이어의 공식 채팅 버튼을 먼저 씀 (채팅 안쪽 버튼만 누르면 YouTube 상태와 어긋나 전체화면에서 검은 칸이 생길 수 있음)
+    return [...document.querySelectorAll('yt-player-quick-action-buttons button')].find((b) =>
+        /실시간 채팅|live chat/i.test(b.getAttribute('aria-label') || '') && b.getAttribute('aria-pressed') === 'false') ||
+      $('#show-hide-button button', frame) ||
+      [...frame.querySelectorAll('button')].find((b) => /채팅 표시|show chat/i.test(lab(b))) || null;
   }
   // 사용자가 숨긴 채팅 자리에 보여줄 안내 + 다시 보기 버튼
   let chatOffEl = null;
@@ -870,7 +872,7 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
     if (!on) { detachChat(); if (layer) { layer.remove(); layer = null; } return; }
 
     // 사용자가 채팅을 접어 둔 상태면 메시지가 안 오므로 한 번 펼침
-    if (frame.hasAttribute('collapsed') && !expandTried && !userCollapsed) {
+    if (frame.hasAttribute('collapsed') && !expandTried && !userCollapsed && !isFull) {
       expandTried = true;
       const btn = chatShowButton(frame);
       if (btn) clickKeep(btn);
@@ -979,35 +981,20 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
   }
 
   /* ---------- 메인 ---------- */
-  // 전체화면에 들어갈 때: 숨겨서 열어 둔 스크립트·챕터·질문하기 패널을 닫아 오른쪽 칸이 비어 있는 상태로 시작
-  // (전체화면은 영상만 크게, 오른쪽 칸은 사용자가 직접 열 때만. 일반 화면으로 돌아오면 탭이 패널을 다시 엶)
-  let fullSynced = false;
-  function syncFullscreen(f) {
-    if (!f || !f.hasAttribute('fullscreen')) { fullSynced = false; return; }
-    if (fullSynced) return;
-    fullSynced = true;
-    // 채팅 iframe 이 전체화면 오른쪽 칸으로 옮겨지면 다시 그려지기 전까지 검게 보일 수 있어, 크기 갱신을 몇 번 알려 줌
-    [300, 1000, 2500].forEach((t) => setTimeout(() => {
-      const fr = $('ytd-live-chat-frame#chat');
-      try {
-        const w = $('iframe', fr).contentWindow, d = $('iframe', fr).contentDocument;
-        w.dispatchEvent(new Event('resize'));
-        const sc = d.querySelector('#item-scroller');
-        if (sc) sc.scrollTop = sc.scrollHeight;
-      } catch (_) {}
-    }, t));
-    if (!settings.enabled) return;
-    for (const p of f.querySelectorAll('ytd-engagement-panel-section-list-renderer')) {
-      if (!(p.getAttribute('visibility') || '').endsWith('EXPANDED')) continue;
-      if (/comments-section/.test(p.getAttribute('target-id') || '')) continue;
-      const b = p.querySelector('#visibility-button button, #header button[aria-label="닫기"], #header button[aria-label="Close"]');
-      if (b) clickKeep(b);
-    }
+  // ---- 전체화면·영화관 모드와 실시간 채팅 ----
+  // YouTube 는 전체화면에서 오른쪽 칸(#panels-full-bleed-container)에 채팅·패널을 옮겨 보여준다.
+  // 이때 채팅이 꺼져 있어도 칸 자리만 남아 검은 빈칸이 생기거나, 옮겨진 채팅 iframe 이 비어 버리는 일이 있다.
+  // 그래서 전체화면에서는 오른쪽 칸을 기본으로 치워 두고(영상이 전체 폭), 사용자가 플레이어의 "실시간 채팅" 버튼을
+  // 직접 누르고 채팅이 실제로 켜져 있을 때만 보여준다. 스크립트는 그 밖에 채팅을 마음대로 켜고 끄지 않는다.
+  let lastMode = '', modeChangedAt = 0, healTimers = [], fsRevealed = false, fsHidden = null;
+  const isFullscreen = (f) => !!document.fullscreenElement || (!!f && f.hasAttribute('fullscreen'));
+  const quickChatButton = () => [...document.querySelectorAll('yt-player-quick-action-buttons button')].find((b) =>
+    /실시간 채팅|채팅 숨기기|live chat|hide chat/i.test(b.getAttribute('aria-label') || '')) || null;
+  const chatOnNow = (qb) => qb ? qb.getAttribute('aria-pressed') === 'true' : !($('ytd-live-chat-frame#chat') || {hasAttribute: () => true}).hasAttribute('collapsed');
+  function kickResize() {
+    [0, 120, 400].forEach((t) => setTimeout(() => window.dispatchEvent(new Event('resize')), t));
   }
-
-  // 전체화면/영화관 모드로 바뀌면 YouTube 가 채팅을 다른 칸으로 옮기는데, 이때 채팅 iframe 이 다시 열리면서
-  // 처음엔 검게(빈 채팅) 남는 경우가 있다. 사용자가 채팅을 껐다 켜면 되던 것을 대신 해 줌.
-  let lastMode = '', healTimers = [];
+  // 채팅 iframe 이 살아 있는지 (옮겨진 뒤 비어 버렸는지)
   const chatAlive = (fr) => {
     try {
       const d = $('iframe', fr).contentDocument;
@@ -1016,50 +1003,81 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
       return !!d.querySelector('yt-live-chat-item-list-renderer #items');
     } catch (_) { return true; }   // 읽을 수 없으면 건드리지 않음
   };
-  function healChat(left) {
+  // 켜져 있는데 비어 있는 채팅: 사용자가 하던 대로 한 번 껐다 켬 (두 번 연속 비어 있을 때만, 모드 전환마다 한 번)
+  let healDone = false;
+  function healChat(stage) {
+    if (healDone) return;
     const fr = $('ytd-live-chat-frame#chat');
-    if (!fr || fr.hasAttribute('collapsed') || userCollapsed || chatAlive(fr)) return;
-    const lab = (b) => (b.getAttribute('aria-label') || '') + ' ' + b.textContent;
-    const hide = [...document.querySelectorAll('yt-player-quick-action-buttons button')].find((b) =>
-        /채팅 숨기기|hide chat/i.test(lab(b)) || (/실시간 채팅|live chat/i.test(lab(b)) && b.getAttribute('aria-pressed') === 'true')) ||
-      [...fr.querySelectorAll('button')].find((b) => /채팅 숨기기|hide chat/i.test(lab(b)));
-    if (!hide) return;
-    clickKeep(hide);
+    if (!fr || fr.hasAttribute('collapsed') || chatAlive(fr)) return;
+    if (stage === 0) { healTimers.push(setTimeout(() => healChat(1), 1500)); return; }
+    const qb = quickChatButton();
+    if (!qb || !chatOnNow(qb)) return;
+    healDone = true;
+    clickKeep(qb);                                    // 끄기
     healTimers.push(setTimeout(() => {
-      const f2 = $('ytd-live-chat-frame#chat');
-      const show = f2 && f2.hasAttribute('collapsed') && chatShowButton(f2);
-      if (show) { lastReopen = Date.now(); clickKeep(show); }
-      if (left > 0) healTimers.push(setTimeout(() => healChat(left - 1), 3000));   // 그래도 비어 있으면 한 번 더
-    }, 500));
+      const q2 = quickChatButton();
+      if (q2 && !chatOnNow(q2)) clickKeep(q2);        // 다시 켜기
+    }, 600));
   }
-  // 전체화면 기본값: 오른쪽 채팅 칸은 닫힌 채로 시작 (사용자가 플레이어의 "실시간 채팅" 버튼을 눌러야 열림)
-  // 들어간 뒤 사용자가 아무것도 누르지 않았을 때만 닫음 → 직접 연 채팅은 건드리지 않음
-  function hideFullChat() {
+  // 전체화면에서 사용자가 채팅을 열 때: 열어 둔 스크립트·챕터 등 패널은 닫아 채팅만 오른쪽 칸을 쓰게 함
+  function closeSidePanels(f) {
+    for (const p of f.querySelectorAll('ytd-engagement-panel-section-list-renderer')) {
+      if (!(p.getAttribute('visibility') || '').endsWith('EXPANDED')) continue;
+      if (/comments-section/.test(p.getAttribute('target-id') || '')) continue;
+      const b = p.querySelector('#visibility-button button, #header button[aria-label="닫기"], #header button[aria-label="Close"]');
+      if (b) clickKeep(b);
+    }
+  }
+  // 플레이어의 "실시간 채팅" 버튼을 사용자가 직접 눌렀을 때 (스크립트가 누른 클릭은 isTrusted=false 라 무시됨)
+  document.addEventListener('click', (e) => {
+    if (!e.isTrusted || !settings.enabled) return;
+    const b = e.target && e.target.closest && e.target.closest('yt-player-quick-action-buttons button');
+    if (!b || !/실시간 채팅|채팅 숨기기|live chat|hide chat/i.test(b.getAttribute('aria-label') || '')) return;
     const f = $('ytd-watch-flexy');
-    if (!settings.enabled || !f || !(document.fullscreenElement || f.hasAttribute('fullscreen'))) return;
-    if (userInputAt > modeChangedAt + 150) return;
-    const qb = [...document.querySelectorAll('yt-player-quick-action-buttons button')].find((b) =>
-      /실시간 채팅|채팅 숨기기|live chat|hide chat/i.test(b.getAttribute('aria-label') || ''));
-    if (qb && qb.getAttribute('aria-pressed') === 'true') clickKeep(qb);
-  }
+    if (!isFullscreen(f)) return;
+    const wasOn = b.getAttribute('aria-pressed') === 'true';
+    const hiddenNow = document.documentElement.classList.contains('ytpc-fs-nochat');
+    if (!hiddenNow) return;                           // 이미 보이는 상태면 YouTube 기본 동작(켜기/끄기) 그대로
+    fsRevealed = true;
+    healDone = false;
+    if (f) closeSidePanels(f);
+    setTimeout(() => {
+      // 화면엔 안 보였지만 채팅이 켜져 있던 경우, 사용자의 클릭이 오히려 끈 것 → 다시 켬 (= 껐다 켜기, 새로 불러옴)
+      const q = quickChatButton();
+      if (wasOn && q && !chatOnNow(q)) clickKeep(q);
+      schedule();
+      healTimers.push(setTimeout(() => healChat(0), 2000));
+    }, 250);
+  }, true);
   function watchMode(f) {
-    const mode = f ? [!!document.fullscreenElement || f.hasAttribute('fullscreen'), f.hasAttribute('theater')].join() : '';
+    const fs = isFullscreen(f);
+    // 전체화면에서 오른쪽 칸을 보여줄지: 사용자가 열었고, 실제로 채팅(또는 패널)이 켜져 있을 때만
+    const showSide = fsRevealed && !!f && (f.hasAttribute('live-chat-present-and-expanded') ||
+      f.hasAttribute('engagement-panel-expanded') || f.hasAttribute('playlist-panel-expanded'));
+    const hide = !!settings.enabled && fs && !showSide;
+    if (hide !== fsHidden) {
+      fsHidden = hide;
+      document.documentElement.classList.toggle('ytpc-fs-nochat', hide);
+      kickResize();                                   // 영상 크기 다시 계산
+    }
+    const mode = f ? [fs, f.hasAttribute('theater')].join() : '';
     if (mode === lastMode) return;
     const first = lastMode === '';
     lastMode = mode;
+    if (!fs) fsRevealed = false;
     if (first) return;
     modeChangedAt = Date.now();
+    healDone = false;
     healTimers.forEach(clearTimeout); healTimers = [];
-    healTimers.push(setTimeout(hideFullChat, 300), setTimeout(hideFullChat, 900), setTimeout(hideFullChat, 1800));
-    healTimers.push(setTimeout(() => healChat(1), 3500));
+    // 채팅이 다른 칸으로 옮겨지며 비어 버렸으면 고침 (전체화면에서 숨겨 둔 상태여도 버블용으로 살려 둠)
+    healTimers.push(setTimeout(() => healChat(0), 2500));
   }
 
   function apply() {
-    watchMode($('ytd-watch-flexy'));
+    const f = $('ytd-watch-flexy');
+    watchMode(f);
     trackChatCollapse();
     applyBubbles();
-    const f = $('ytd-watch-flexy');
-    syncFullscreen(f);
     const inner = f && $('#secondary-inner', f);
     const ok = settings.enabled && location.pathname === '/watch' && f && inner &&
                f.hasAttribute('is-two-columns_') && !f.hasAttribute('theater') && !f.hasAttribute('fullscreen');
@@ -1187,7 +1205,7 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
   });
   document.addEventListener('yt-navigate-finish', () => {
     navAt = Date.now();
-    expandTried = false; userCollapsed = false; prevCollapsed = null; lastMode = '';
+    expandTried = false; userCollapsed = false; prevCollapsed = null; lastMode = ''; healDone = false;
     healTimers.forEach(clearTimeout); healTimers = [];
     userPicked = false; activeTab = ''; prevExpanded = false; prevTab = ''; lastEnsure = 0;
     setNoComments(false);
@@ -1211,7 +1229,7 @@ const YTPC_CSS = "/* 공통 디자인 값: 모든 간격·모서리를 이 두 �
 
   // 패널(스크립트·챕터 등)이 열리고 닫히는 즉시 반영
   new MutationObserver(schedule).observe(document.documentElement,
-    { attributes: true, subtree: true, attributeFilter: ['visibility', 'collapsed', 'fullscreen', 'theater'] });
+    { attributes: true, subtree: true, attributeFilter: ['visibility', 'collapsed', 'fullscreen', 'theater', 'live-chat-present-and-expanded', 'engagement-panel-expanded', 'playlist-panel-expanded', 'aria-pressed'] });
 
   setInterval(schedule, 1000); // 안전망
 
